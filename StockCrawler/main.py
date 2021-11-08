@@ -36,4 +36,7 @@ def get_stock_data_from_web(site_name, require_args=None):
 
 
 if __name__ == '__main__':
-    get_stock_data_from_web("KIND")
+    # stock_required = get_stock_data_from_web("KIND")
+    stock_required = get_stock_data_from_web('KIND', ['회사명', '종목코드'])
+
+    print(stock_required.head(10))
