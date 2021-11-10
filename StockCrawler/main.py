@@ -1,4 +1,9 @@
 import pandas as pd
+from urllib.request import urlopen
+from requests import get
+from bs4 import BeautifulSoup
+import os
+
 
 def get_stock_data_from_web(site_name, require_args=None):
     _SITE_URL = {
@@ -35,8 +40,50 @@ def get_stock_data_from_web(site_name, require_args=None):
     return stock_required
 
 
+_URL_DICT = {
+    'naver': 'https://finance.naver.com/sise/sise_market_sum.naver',
+}
+
+def is_valid_site(site_name):
+    return True if site_name.lower() in _URL_DICT else False
+
+def get_url(site_name):
+    return _URL_DICT[site_name.lower()]
+
+def get_market_cap_from_NAVER(url):
+    req = get(url)
+    html = BeautifulSoup(req.content.decode('euc-kr', 'replace'), 'html.parser')
+    trs = html.select_one('tbody').findAll('tr')
+
+    _INTEREST_COLS = {
+        'no': 0,
+        'company': 1,
+        'current': 2,
+        'market_cap': 6,
+        'PER': 10,
+        'ROE': 11
+    }
+    stock_dataframe = pd.DataFrame(columns=_INTEREST_COLS.keys())
+    for tr in trs:
+        td = tr.select('td')
+        data = []
+        for col in _INTEREST_COLS.keys():
+            if not td[_INTEREST_COLS[col]].text:
+                break
+            data.append(td[_INTEREST_COLS[col]].text)
+
+        if len(data) > 0:
+            stock_dataframe = stock_dataframe.append(pd.Series(data, index=stock_dataframe.columns), ignore_index=True)
+    stock_dataframe.set_index('no', inplace=True)
+    return stock_dataframe
+
+
 if __name__ == '__main__':
     # stock_required = get_stock_data_from_web("KIND")
-    stock_required = get_stock_data_from_web('KIND', ['회사명', '종목코드'])
+    # stock_required = get_stock_data_from_web('KIND', ['회사명', '종목코드'])
 
-    print(stock_required.head(10))
+    site_name = 'Naver'
+    if is_valid_site(site_name):
+        url = get_url(site_name)
+        market_cap = get_market_cap_from_NAVER(url)
+        print(market_cap.head(10))
